@@ -1,19 +1,19 @@
 using BepInEx;
 using UnityEngine;
+using BepInEx.Logging;
 
 namespace ahhmyears
 {
     [BepInPlugin("com.kobrakon.gunshotdeaf", "GunShotDeafen", "1.0.0")]
     public class Plugin : BaseUnityPlugin
     {
-        private static GameObject Hook;
+        internal static ManualLogSource logger;
 
         void Awake()
         {
-            Hook = new GameObject("GunShotDeafener");
-            Hook.AddComponent<DeafController>();
-            Logger.LogInfo("remember to wear your ear pro kids");
-            DontDestroyOnLoad(Hook);
+            logger = Logger;
+            new OuchiePatch().Enable();
+            new OuchieGrenadePatch().Enable();
         }
     }
 }
