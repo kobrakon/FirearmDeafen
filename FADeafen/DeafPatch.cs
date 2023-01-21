@@ -1,28 +1,44 @@
-using EFT;
 using System;
-using UnityEngine;
-using System.Linq;
 using Comfort.Common;
 using System.Reflection;
+using EFT;
 using EFT.InventoryLogic;
 using System.Threading.Tasks;
 using Aki.Reflection.Patching;
-
+using UnityEngine;
+using System.Linq;
 
 namespace ahhmyears
 {
     internal struct PlayerInfo
     {
         internal static GameWorld gameWorld
-        { get { return Singleton<GameWorld>.Instance; } }
+        { get => Singleton<GameWorld>.Instance; }
 
         internal static Player.FirearmController FC
-        { get { return player.HandsController as Player.FirearmController; } }
+        { get => player.HandsController as Player.FirearmController; }
 
         internal static Player player
-        { get { return gameWorld.AllPlayers[0]; } }
+        { get => gameWorld.AllPlayers[0]; }
 
-        internal static bool PlayerHasEarPro() => player.Profile.Inventory.Equipment.GetSlot(EquipmentSlot.Earpiece).ContainedItem != null || player.Profile.Inventory.Equipment.GetSlot(EquipmentSlot.Headwear).ContainedItem != null && (player.Profile.Inventory.Equipment.GetSlot(EquipmentSlot.Headwear).ContainedItem as LootItemClass).Slots.Any(item => item.ContainedItem != null && item.ContainedItem.GetItemComponent<SlotBlockerComponent>() != null && !item.ContainedItem.GetItemComponent<SlotBlockerComponent>().ConflictingSlotNames.Contains("Earpiece")) || player.Profile.Inventory.Equipment.GetSlot(EquipmentSlot.Headwear).ContainedItem != null && player.Profile.Inventory.Equipment.GetSlot(EquipmentSlot.Headwear).ContainedItem.GetItemComponent<SlotBlockerComponent>() != null && player.Profile.Inventory.Equipment.GetSlot(EquipmentSlot.Headwear).ContainedItem.GetItemComponent<SlotBlockerComponent>().ConflictingSlotNames.Contains("Earpiece");
+        internal static bool PlayerHasEarPro()
+        {
+            LootItemClass helm;
+
+            if (player.Profile.Inventory.Equipment.GetSlot(EquipmentSlot.Earpiece).ContainedItem != null)
+                return true;
+
+            if ((helm = player.Profile.Inventory.Equipment.GetSlot(EquipmentSlot.Headwear).ContainedItem as LootItemClass) != null)
+            {
+                SlotBlockerComponent blocker = helm.GetItemComponent<SlotBlockerComponent>();
+                if (blocker != null && blocker.ConflictingSlotNames.Contains("Earpiece"))
+                    return true;
+
+                return helm.Slots.Any(slot => slot.ContainedItem != null && slot.ContainedItem.GetItemComponent<SlotBlockerComponent>() != null && slot.ContainedItem.GetItemComponent<SlotBlockerComponent>().ConflictingSlotNames.Contains("Earpiece"));
+            }
+
+            return false;
+        }
     }
 
     public class OuchiePatch : ModulePatch
@@ -30,19 +46,19 @@ namespace ahhmyears
         protected override MethodBase GetTargetMethod() => typeof(Player.FirearmController).GetMethod("RegisterShot", BindingFlags.Instance | BindingFlags.NonPublic);
 
         [PatchPostfix]
-        static void PostFix(Player.FirearmController __instance)
+        static void PostFix(Player.FirearmController __instance, GClass2401 shot)
         {
             if (PlayerInfo.player is HideoutPlayer) return; // hideout player has no health controller
-            if (PlayerInfo.FC == __instance && GoodToDeafen()) { DoEarOuchie(false); } else if (TargetGoodToDeafen(__instance)) DoEarOuchie(true);
+            if (PlayerInfo.FC == __instance && GoodToDeafen(shot)) DoEarOuchie(false); else if (TargetGoodToDeafen(__instance, shot)) DoEarOuchie(true);
         }
 
-        static bool TargetGoodToDeafen(Player.FirearmController target) => Vector3.Distance(target.gameObject.transform.position, PlayerInfo.player.Transform.position) <= 45 && !PlayerInfo.PlayerHasEarPro() && !target.IsSilenced;
+        static bool TargetGoodToDeafen(Player.FirearmController target, GClass2401 shot) => Vector3.Distance(target.gameObject.transform.position, PlayerInfo.player.Transform.position) <= 45 && !PlayerInfo.PlayerHasEarPro() && !target.IsSilenced && shot.InitialSpeed > 343f;
 
-        static bool GoodToDeafen() => !PlayerInfo.PlayerHasEarPro() && !PlayerInfo.FC.IsSilenced;
+        static bool GoodToDeafen(GClass2401 shot) => !PlayerInfo.PlayerHasEarPro() && !PlayerInfo.FC.IsSilenced && (shot.InitialSpeed > 343f || PlayerInfo.player.Environment == EnvironmentType.Indoor); // <343m/s subsonic
 
         static void DoEarOuchie(bool invokedByBot)
         {
-            if (!invokedByBot && PlayerInfo.FC.Item.AmmoCaliber == "86x70")
+            if (!invokedByBot && PlayerInfo.FC.Item.AmmoCaliber == "86x70") // THIRTY HURTY ATE
             {
                 try
                 {

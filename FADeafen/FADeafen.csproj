@@ -37,8 +37,8 @@
     <Reference Include="UnityEngine.AudioModule">
       <HintPath>..\..\dependencies\UnityEngine.AudioModule.dll</HintPath>
     </Reference>
-    <Reference Include="System.IO">
-      <HintPath>..\..\dependencies\System.Runtime.dll</HintPath>
+    <Reference Include="ItemComponent.Types">
+      <HintPath>..\..\dependencies\ItemComponent.Types.dll</HintPath>
     </Reference>
   </ItemGroup>
 
