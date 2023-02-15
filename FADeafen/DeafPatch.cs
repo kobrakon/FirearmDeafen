@@ -1,12 +1,12 @@
+using EFT;
 using System;
+using UnityEngine;
+using System.Linq;
 using Comfort.Common;
 using System.Reflection;
-using EFT;
 using EFT.InventoryLogic;
 using System.Threading.Tasks;
 using Aki.Reflection.Patching;
-using UnityEngine;
-using System.Linq;
 
 namespace ahhmyears
 {
@@ -46,15 +46,15 @@ namespace ahhmyears
         protected override MethodBase GetTargetMethod() => typeof(Player.FirearmController).GetMethod("RegisterShot", BindingFlags.Instance | BindingFlags.NonPublic);
 
         [PatchPostfix]
-        static void PostFix(Player.FirearmController __instance, GClass2401 shot)
+        static void Postfix(Player.FirearmController __instance, GClass2611 shot)
         {
             if (PlayerInfo.player is HideoutPlayer) return; // hideout player has no health controller
             if (PlayerInfo.FC == __instance && GoodToDeafen(shot)) DoEarOuchie(false); else if (TargetGoodToDeafen(__instance, shot)) DoEarOuchie(true);
         }
 
-        static bool TargetGoodToDeafen(Player.FirearmController target, GClass2401 shot) => Vector3.Distance(target.gameObject.transform.position, PlayerInfo.player.Transform.position) <= 45 && !PlayerInfo.PlayerHasEarPro() && !target.IsSilenced && shot.InitialSpeed > 343f;
+        static bool TargetGoodToDeafen(Player.FirearmController target, GClass2611 shot) => Vector3.Distance(target.gameObject.transform.position, PlayerInfo.player.Transform.position) <= 45 && !PlayerInfo.PlayerHasEarPro() && !target.IsSilenced && shot.Speed > 343f;
 
-        static bool GoodToDeafen(GClass2401 shot) => !PlayerInfo.PlayerHasEarPro() && !PlayerInfo.FC.IsSilenced && (shot.InitialSpeed > 343f || PlayerInfo.player.Environment == EnvironmentType.Indoor); // <343m/s subsonic
+        static bool GoodToDeafen(GClass2611 shot) => !PlayerInfo.PlayerHasEarPro() && !PlayerInfo.FC.IsSilenced && (shot.Speed > 343f || PlayerInfo.player.Environment == EnvironmentType.Indoor); // <343m/s subsonic
 
         static void DoEarOuchie(bool invokedByBot)
         {
@@ -92,7 +92,7 @@ namespace ahhmyears
         }
 
         [PatchPrefix]
-        static void PreFix(Grenade __instance)
+        static void Prefix(Grenade __instance)
         {
             float dist = Vector3.Distance(__instance.transform.position, PlayerInfo.player.Transform.position);
             if (!PlayerInfo.PlayerHasEarPro() && dist <= 30)
