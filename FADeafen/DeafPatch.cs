@@ -19,7 +19,7 @@ namespace ahhmyears
         { get => player.HandsController as Player.FirearmController; }
 
         internal static Player player
-        { get => gameWorld.AllPlayers[0]; }
+        { get => gameWorld.MainPlayer; }
 
         internal static bool PlayerHasEarPro()
         {
@@ -46,15 +46,21 @@ namespace ahhmyears
         protected override MethodBase GetTargetMethod() => typeof(Player.FirearmController).GetMethod("RegisterShot", BindingFlags.Instance | BindingFlags.NonPublic);
 
         [PatchPostfix]
-        static void Postfix(Player.FirearmController __instance, GClass2611 shot)
+        static void Postfix(Player.FirearmController __instance, object shot)
         {
             if (PlayerInfo.player is HideoutPlayer) return; // hideout player has no health controller
-            if (PlayerInfo.FC == __instance && GoodToDeafen(shot)) DoEarOuchie(false); else if (TargetGoodToDeafen(__instance, shot)) DoEarOuchie(true);
+
+            float bulletSpeed = (float)shot.GetType().GetField("Speed", BindingFlags.Instance | BindingFlags.Public).GetValue(shot);
+
+            if (PlayerInfo.FC == __instance && GoodToDeafen(bulletSpeed)) 
+                DoEarOuchie(false); 
+            else if (TargetGoodToDeafen(__instance, bulletSpeed)) 
+                DoEarOuchie(true);
         }
 
-        static bool TargetGoodToDeafen(Player.FirearmController target, GClass2611 shot) => Vector3.Distance(target.gameObject.transform.position, PlayerInfo.player.Transform.position) <= 45 && !PlayerInfo.PlayerHasEarPro() && !target.IsSilenced && shot.Speed > 343f;
+        static bool TargetGoodToDeafen(Player.FirearmController target, float bulletSpeed) => Vector3.Distance(target.gameObject.transform.position, PlayerInfo.player.Transform.position) <= 45 && !PlayerInfo.PlayerHasEarPro() && !target.IsSilenced && bulletSpeed > 343f;
 
-        static bool GoodToDeafen(GClass2611 shot) => !PlayerInfo.PlayerHasEarPro() && !PlayerInfo.FC.IsSilenced && (shot.Speed > 343f || PlayerInfo.player.Environment == EnvironmentType.Indoor); // <343m/s subsonic
+        static bool GoodToDeafen(float bulletSpeed) => !PlayerInfo.PlayerHasEarPro() && !PlayerInfo.FC.IsSilenced && (bulletSpeed > 343f || PlayerInfo.player.Environment == EnvironmentType.Indoor); // <343m/s subsonic
 
         static void DoEarOuchie(bool invokedByBot)
         {
@@ -66,7 +72,7 @@ namespace ahhmyears
                     PlayerInfo.player.ActiveHealthController.DoContusion(4, 50);
                 } catch (Exception e)
                 {
-                    Plugin.logger.LogError("Attempting to access ActiveHealthController resulted in an exception, falling back to PlayerHealthControlller" + e);
+                    Plugin.logger.LogError("Attempting to access ActiveHealthController resulted in an exception, falling back to PlayerHealthController" + e);
                     PlayerInfo.player.PlayerHealthController.DoStun(1, 0);
                     PlayerInfo.player.PlayerHealthController.DoContusion(4, 100);
                 }
@@ -77,7 +83,7 @@ namespace ahhmyears
                 PlayerInfo.player.ActiveHealthController.DoContusion(0, 100);
             } catch (Exception e)
             {
-                Plugin.logger.LogError("Attempting to access ActiveHealthController resulted in an exception, falling back to PlayerHealthControlller" + e);
+                Plugin.logger.LogError("Attempting to access ActiveHealthController resulted in an exception, falling back to PlayerHealthController" + e);
                 PlayerInfo.player.PlayerHealthController.DoStun(1, 0);
                 PlayerInfo.player.PlayerHealthController.DoContusion(0, 100);
             }
@@ -88,7 +94,7 @@ namespace ahhmyears
     {
         protected override MethodBase GetTargetMethod()
         {
-            return typeof(Grenade).GetMethod("OnExplosion", BindingFlags.Instance | BindingFlags.Public);
+            return typeof(Grenade).GetMethod(nameof(Grenade.OnExplosion), BindingFlags.Instance | BindingFlags.Public);
         }
 
         [PatchPrefix]
